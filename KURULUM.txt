@@ -1,0 +1,37 @@
+YAKIT VE KM TAKİP - KURULUM (BİR KERE, YÖNETİCİ YAPAR)
+
+BU PROGRAM NEDİR?
+Android telefonda ana ekrana eklenen, uygulama gibi açılan programdır (PWA).
+- KM ve yakıt kaydı (litre, birim fiyat, tutar)
+- İstenen tarih aralığında rapor (yapılan km, litre, tutar, L/100km, TL/km)
+- Raporu Excel'de açılan CSV olarak indirme veya WhatsApp'tan paylaşma
+- İnternet yokken de kayıt girilir, internet gelince Google Drive'a eşitlenir
+- Sadece Android telefonda açılır (bilgisayar/iPhone'da uyarı verir)
+- Her telefondaki veri o telefonda tutulur ve kişinin kendi Google Drive'ına yedeklenir
+
+1) GOOGLE CLIENT ID (ücretsiz)
+   a. console.cloud.google.com adresine girin, yeni proje açın (örn. "Yakit Takip")
+   b. "API'ler ve Hizmetler > Kitaplık" bölümünden "Google Drive API"yi etkinleştirin
+   c. "OAuth izin ekranı": Harici seçin, uygulama adı yazın, e-postanızı girin
+      - "Kapsamlar" kısmına .../auth/drive.appdata ekleyin
+      - Yayın durumu "Test" ise kullanacak kişilerin Gmail adreslerini "Test kullanıcıları"na ekleyin
+        (en fazla 100 kişi). İsterseniz "Uygulamayı yayınla" deyin.
+   d. "Kimlik bilgileri > Kimlik bilgileri oluştur > OAuth istemci kimliği > Web uygulaması"
+      - "Yetkili JavaScript kaynakları" kısmına GitHub Pages adresinizi yazın
+        örn: https://KULLANICIADI.github.io
+   e. Oluşan Client ID'yi config.js dosyasına yazın.
+
+2) YAYINLAMA (GitHub Pages, ücretsiz)
+   Bu klasördeki tüm dosyaları GitHub'daki "yakit-takip" deponuza yükleyin
+   (Settings > Pages > main / root). Adres: https://KULLANICIADI.github.io/yakit-takip/
+
+3) WHATSAPP İLE DAĞITIM
+   Adresi kişilere WhatsApp'tan gönderin. Kişi:
+   a. Linke Chrome'da açar (WhatsApp içinden "Chrome'da aç")
+   b. Chrome menüsü (⋮) > "Ana ekrana ekle" / "Uygulamayı yükle"
+   c. Açılışta ad ve plakasını yazar
+   d. Ayarlar > "Google Drive ile Eşitle" ile hesabını bağlar
+
+NOT: Bu bir PWA'dır, APK değildir. Bu yüzden Play Protect uyarısı ve "bilinmeyen kaynak"
+izni gerekmez. Telefona özel çalışması: veri o telefonun kayıt alanında ve kullanıcının kendi
+Drive'ındadır; başka bir telefona link gönderilirse orada sıfırdan kurulum yapılması gerekir.

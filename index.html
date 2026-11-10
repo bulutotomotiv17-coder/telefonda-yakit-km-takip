@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a73e8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>Yakıt ve KM Takip</title>
+<style>
+:root{--p:#1a73e8;--bg:#f3f5f9;--c:#fff;--t:#1d2433;--m:#6b7587;--ok:#188038;--er:#d93025}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,Roboto,sans-serif;background:var(--bg);color:var(--t);padding-bottom:76px}
+header{background:var(--p);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:18px;margin:0}header small{opacity:.85;display:block;font-size:12px}
+main{padding:14px;max-width:640px;margin:auto}
+.card{background:var(--c);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
+label{display:block;font-size:13px;color:var(--m);margin:10px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid #cfd6e4;border-radius:10px;font-size:16px;background:#e9ecf2;color:var(--t);transition:background .15s}
+input:focus{background:#fff6b3;border-color:#e0c200;outline:none}
+#logout{width:auto;margin:0;padding:9px 16px;background:#d93025;color:#fff;font-size:15px;border:2px solid #fff;border-radius:8px}
+#v-add .card{padding:10px 12px;margin-bottom:10px}#v-add h3{margin:0 0 2px;font-size:16px}#v-add label{margin:6px 0 3px;font-size:12px}#v-add button{margin-top:10px;padding:11px}
+#bye{position:fixed;inset:0;background:var(--bg);z-index:20;display:none;align-items:center;justify-content:center;text-align:center;padding:30px}
+button{border:0;border-radius:10px;padding:13px 16px;font-size:16px;font-weight:600;background:var(--p);color:#fff;width:100%;margin-top:12px}
+button.s{background:#e8eefb;color:var(--p)}button.d{background:#fde7e5;color:var(--er)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #dde3ee;padding-bottom:env(safe-area-inset-bottom)}
+nav a{flex:1;text-align:center;padding:12px 4px;font-size:13px;color:var(--m);font-weight:600}
+nav a.on{color:var(--p);border-top:3px solid var(--p);margin-top:-1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#f3f6fd;border-radius:12px;padding:12px}.stat b{font-size:20px;display:block}.stat span{font-size:12px;color:var(--m)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 4px;border-bottom:1px solid #e6eaf2;text-align:right}th:first-child,td:first-child{text-align:left}
+.item{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid #e6eaf2}
+.item small{color:var(--m)}.item button{width:auto;margin:0;padding:6px 10px;font-size:13px}
+#msg{position:fixed;left:14px;right:14px;bottom:86px;background:#202124;color:#fff;padding:12px;border-radius:10px;display:none;z-index:9}
+.hide{display:none}.badge{font-size:12px;padding:3px 8px;border-radius:20px;background:#ffffff33}
+.block{text-align:center;padding:40px 20px}
+</style>
+</head>
+<body>
+<header><div><h1>Yakıt ve KM Takip</h1><small id="who"></small><span class="badge" id="sync">Çevrimdışı</span></div><button id="logout" onclick="logout()">ÇIKIŞ</button></header>
+<div id="bye"><div><h2>Çıkış yapıldı</h2><p style="color:var(--m)">Kayıtlarınız kaydedildi. Uygulamayı kapatabilirsiniz.</p><button onclick="location.reload()">Tekrar Aç</button></div></div>
+<main>
+<div id="block" class="card block hide"><h2>Sadece Android</h2><p>Bu uygulama yalnızca Android telefonlarda çalışır.</p></div>
+
+<section id="v-setup" class="hide">
+<div class="card"><h3>İlk kurulum</h3>
+<label>Ad Soyad</label><input id="s-name" autocomplete="off">
+<label>Araç plakası</label><input id="s-plate" autocomplete="off" style="text-transform:uppercase">
+<button onclick="saveSetup()">Kaydet ve Başla</button></div></section>
+
+<section id="v-add" class="hide">
+<div class="card"><h3>Yeni kayıt</h3>
+<div class="row"><div><label>Tarih</label><input type="date" id="a-date"></div>
+<div><label>Kilometre</label><input type="number" inputmode="numeric" id="a-km" placeholder="125430"></div></div>
+<div class="row"><div><label>Litre</label><input type="number" inputmode="decimal" step="0.01" id="a-l" oninput="calc('l')"></div>
+<div><label>Birim fiyat (TL)</label><input type="number" inputmode="decimal" step="0.01" id="a-u" oninput="calc('l')"></div></div>
+<div class="row"><div><label>Toplam tutar (TL)</label><input type="number" inputmode="decimal" step="0.01" id="a-t" oninput="calc('t')"></div>
+<div><label>Not / İstasyon</label><input id="a-n"></div></div>
+<button onclick="addRec()">Kaydet</button></div>
+<div class="card"><h3>Kayıtlar (en yeni üstte)</h3><div id="list"></div></div></section>
+
+<section id="v-rep" class="hide">
+<div class="card"><h3>Rapor</h3>
+<div class="row"><div><label>Başlangıç</label><input type="date" id="r-from"></div><div><label>Bitiş</label><input type="date" id="r-to"></div></div>
+<button onclick="report()">Raporu Göster</button></div>
+<div id="r-out" class="hide">
+<div class="card"><div class="stats" id="r-stats"></div></div>
+<div class="card"><table id="r-table"></table></div>
+<div class="card"><button onclick="exportCsv(false)">Excel'e Aktar (CSV indir)</button>
+<button class="s" onclick="exportCsv(true)">WhatsApp / Paylaş</button></div></div></section>
+
+<section id="v-set" class="hide">
+<div class="card"><h3>Google Drive</h3>
+<p id="drv-info" style="color:var(--m);font-size:14px"></p>
+<button onclick="syncNow(true)">Google Drive ile Eşitle</button></div>
+<div class="card"><h3>Hesap</h3><p id="acc" style="font-size:14px;color:var(--m)"></p>
+<button class="d" onclick="resetAll()">Bu telefondaki tüm verileri sil</button></div></section>
+</main>
+<div id="msg"></div>
+<nav id="nav" class="hide">
+<a href="#add" data-v="add">Giriş</a><a href="#rep" data-v="rep">Rapor</a><a href="#set" data-v="set">Ayarlar</a></nav>
+<script src="config.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const $=id=>document.getElementById(id);
+const K='yt_state_v1';
+let S=load();
+function load(){try{return JSON.parse(localStorage.getItem(K))||{}}catch(e){return{}}}
+function save(){localStorage.setItem(K,JSON.stringify(S))}
+function toast(t){const m=$('msg');m.textContent=t;m.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>m.style.display='none',3000)}
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const fmt=(n,d=2)=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fd=s=>s.split('-').reverse().join('.');
+
+// ---- Sadece Android ----
+const isAndroid=/Android/i.test(navigator.userAgent)&&/Mobile|Android/i.test(navigator.userAgent);
+if(!isAndroid){$('block').classList.remove('hide')}
+else init();
+
+function init(){
+  if(!S.deviceId){S.deviceId=uid();S.recs=[];save()}
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  window.addEventListener('hashchange',route);
+  window.addEventListener('online',()=>{updBadge();syncNow(false)});
+  window.addEventListener('offline',updBadge);
+  $('a-date').value=today();
+  const d=new Date();$('r-from').value=new Date(d.getFullYear(),d.getMonth(),1).toLocaleDateString('sv');$('r-to').value=today();
+  route();updBadge();
+}
+function route(){
+  ['setup','add','rep','set'].forEach(v=>$('v-'+v).classList.add('hide'));
+  if(!S.name){$('v-setup').classList.remove('hide');$('nav').classList.add('hide');return}
+  $('nav').classList.remove('hide');
+  $('who').textContent=S.name+' • '+S.plate;
+  const v=(location.hash||'#add').slice(1);const vv=['add','rep','set'].includes(v)?v:'add';
+  $('v-'+vv).classList.remove('hide');
+  document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===vv));
+  if(vv==='add')renderList();
+  if(vv==='set')renderSet();
+}
+function saveSetup(){
+  const n=$('s-name').value.trim(),p=$('s-plate').value.trim().toUpperCase();
+  if(!n||!p)return toast('Ad ve plaka gerekli');
+  S.name=n;S.plate=p;save();location.hash='#add';route();
+}
+// ---- Kayıtlar ----
+function calc(from){
+  const l=parseFloat($('a-l').value),u=parseFloat($('a-u').value),t=parseFloat($('a-t').value);
+  if(from==='l'&&l>0&&u>0)$('a-t').value=(l*u).toFixed(2);
+  if(from==='t'&&l>0&&t>0)$('a-u').value=(t/l).toFixed(2);
+}
+function live(){return S.recs.filter(r=>!r.del).sort((a,b)=>a.date.localeCompare(b.date)||a.km-b.km)}
+function addRec(){
+  const km=parseInt($('a-km').value),l=parseFloat($('a-l').value)||0,t=parseFloat($('a-t').value)||0,date=$('a-date').value;
+  if(!date||!(km>=0))return toast('Tarih ve kilometre gerekli');
+  const prev=live().filter(r=>r.date<=date).pop();
+  if(prev&&km<prev.km&&!confirm('Girilen km, önceki kayıttan ('+prev.km+') küçük. Yine de kaydedilsin mi?'))return;
+  S.recs.push({id:uid(),date,km,l,t,n:$('a-n').value.trim(),u:Date.now()});save();
+  ['a-km','a-l','a-u','a-t','a-n'].forEach(i=>$(i).value='');
+  if(document.activeElement)document.activeElement.blur();
+  renderList();toast('Kaydedildi');syncNow(false);
+}
+async function logout(){
+  if(!confirm('Çıkış yapılsın mı?'))return;
+  try{if(S.driveOn&&online())await Promise.race([syncNow(false),new Promise(r=>setTimeout(r,4000))])}catch(e){}
+  try{if(token&&window.google&&google.accounts)google.accounts.oauth2.revoke(token)}catch(e){}
+  token=null;tokenExp=0;S.driveOn=0;save();
+  $('bye').style.display='flex';
+  try{window.close()}catch(e){}
+}
+function renderList(){
+  const r=live().reverse().slice(0,100);
+  $('list').innerHTML=r.length?r.map(x=>`<div class="item"><div><b>${fd(x.date)}</b> • ${fmt(x.km,0)} km<br><small>${x.l?fmt(x.l)+' L • ':''}${x.t?fmt(x.t)+' TL':''} ${x.n?'• '+esc(x.n):''}</small></div><button class="d" onclick="delRec('${x.id}')">Sil</button></div>`).join(''):'<p style="color:var(--m)">Henüz kayıt yok.</p>';
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function delRec(id){if(!confirm('Kayıt silinsin mi?'))return;const r=S.recs.find(x=>x.id===id);r.del=1;r.u=Date.now();save();renderList();syncNow(false)}
+// ---- Rapor ----
+let RR=[];
+function report(){
+  const f=$('r-from').value,t=$('r-to').value;
+  if(!f||!t||f>t)return toast('Tarih aralığını kontrol edin');
+  RR=live().filter(r=>r.date>=f&&r.date<=t);
+  if(!RR.length){$('r-out').classList.add('hide');return toast('Bu aralıkta kayıt yok')}
+  const all=live();const before=all.filter(r=>r.date<f).pop();
+  const startKm=before?before.km:RR[0].km,endKm=RR[RR.length-1].km;
+  const dist=Math.max(0,endKm-startKm),L=RR.reduce((a,b)=>a+b.l,0),T=RR.reduce((a,b)=>a+b.t,0);
+  $('r-stats').innerHTML=[['Yapılan km',fmt(dist,0)],['Toplam litre',fmt(L)],['Toplam tutar',fmt(T)+' TL'],['Ort. tüketim',dist>0&&L>0?fmt(L/dist*100)+' L/100km':'-'],['Km başına maliyet',dist>0&&T>0?fmt(T/dist)+' TL':'-'],['Kayıt sayısı',RR.length]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join('');
+  $('r-table').innerHTML='<tr><th>Tarih</th><th>Km</th><th>Litre</th><th>Tutar</th></tr>'+RR.map(r=>`<tr><td>${fd(r.date)}</td><td>${fmt(r.km,0)}</td><td>${r.l?fmt(r.l):'-'}</td><td>${r.t?fmt(r.t):'-'}</td></tr>`).join('');
+  $('r-out').classList.remove('hide');
+  RR.meta={f,t,startKm,endKm,dist,L,T};
+}
+async function exportCsv(share){
+  const m=RR.meta;if(!m)return;
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  let c='Araç;'+q(S.plate)+'\nSürücü;'+q(S.name)+'\nDönem;'+fd(m.f)+' - '+fd(m.t)+'\nYapılan km;'+m.dist+'\nToplam litre;'+String(m.L.toFixed(2)).replace('.',',')+'\nToplam tutar;'+String(m.T.toFixed(2)).replace('.',',')+'\n\nTarih;Km;Litre;Birim Fiyat;Tutar;Not\n';
+  RR.forEach(r=>{c+=[fd(r.date),r.km,String(r.l).replace('.',','),r.l&&r.t?(r.t/r.l).toFixed(2).replace('.',','):'',String(r.t).replace('.',','),q(r.n)].join(';')+'\n'});
+  const name=`rapor_${S.plate.replace(/\s/g,'')}_${m.f}_${m.t}.csv`;
+  const blob=new Blob(['\ufeff'+c],{type:'text/csv'});
+  const file=new File([blob],name,{type:'text/csv'});
+  if(share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Yakıt raporu'});return}catch(e){if(e.name==='AbortError')return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();toast('Rapor indirildi');
+}
+// ---- Google Drive (appDataFolder) ----
+const FN='yakit-km-takip.json';
+let token=null,tokenExp=0,tc=null;
+const online=()=>navigator.onLine;
+function updBadge(){const b=$('sync');b.textContent=!online()?'Çevrimdışı':(S.lastSync?'Eşitlendi':'Eşitlenmedi')}
+function getToken(interactive){
+  return new Promise((res,rej)=>{
+    if(token&&Date.now()<tokenExp)return res(token);
+    if(!window.google||!google.accounts)return rej(new Error('Google yüklenemedi'));
+    if(!window.APP_CONFIG||!APP_CONFIG.CLIENT_ID||APP_CONFIG.CLIENT_ID.startsWith('BURAYA'))return rej(new Error('config.js içine Client ID yazılmamış'));
+    if(!interactive&&!S.driveOn)return rej(new Error('skip'));
+    tc=google.accounts.oauth2.initTokenClient({client_id:APP_CONFIG.CLIENT_ID,scope:'https://www.googleapis.com/auth/drive.appdata',
+      callback:r=>{if(r.error)return rej(new Error(r.error));token=r.access_token;tokenExp=Date.now()+(r.expires_in-60)*1000;S.driveOn=1;save();res(token)},
+      error_callback:e=>rej(new Error(e.type||'iptal'))});
+    tc.requestAccessToken({prompt:interactive&&!S.driveOn?'consent':''});
+  });
+}
+async function api(url,opt={}){
+  opt.headers=Object.assign({Authorization:'Bearer '+token},opt.headers||{});
+  const r=await fetch(url,opt);if(!r.ok)throw new Error('Drive hata '+r.status);return r;
+}
+function merge(a,b){const m=new Map();[...a,...b].forEach(r=>{const o=m.get(r.id);if(!o||(r.u||0)>(o.u||0))m.set(r.id,r)});return[...m.values()]}
+let busy=false;
+async function syncNow(interactive){
+  if(busy||!online()||!S.name)return;
+  if(!interactive&&!S.driveOn)return;
+  busy=true;
+  try{
+    await getToken(interactive);
+    const q=encodeURIComponent(`name='${FN}'`);
+    const lst=await(await api(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`)).json();
+    let id=lst.files[0]&&lst.files[0].id,remote=[];
+    if(id){const d=await(await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json();remote=d.recs||[]}
+    S.recs=merge(S.recs,remote);
+    const body=JSON.stringify({plate:S.plate,name:S.name,recs:S.recs});
+    if(id){await api(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body})}
+    else{
+      const bd='b'+uid(),meta=JSON.stringify({name:FN,parents:['appDataFolder']});
+      await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},
+        body:`--${bd}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${bd}--`});
+    }
+    S.lastSync=new Date().toISOString();save();updBadge();if(interactive)toast('Google Drive ile eşitlendi');
+    renderList();renderSet();
+  }catch(e){if(e.message!=='skip'&&interactive)toast('Eşitleme hatası: '+e.message)}
+  busy=false;
+}
+function renderSet(){
+  $('drv-info').textContent=S.lastSync?'Son eşitleme: '+new Date(S.lastSync).toLocaleString('tr-TR')+'. Kayıtlar internet olduğunda otomatik gönderilir.':'Henüz eşitlenmedi. Düğmeye basıp Google hesabınızı seçin. Veriler sadece sizin Google Drive\'ınızda, bu uygulamaya ait gizli alanda saklanır.';
+  $('acc').textContent=S.name+' • '+S.plate+' • Cihaz: '+S.deviceId;
+}
+function resetAll(){if(confirm('Bu telefondaki tüm kayıtlar silinecek (Drive\'daki yedek kalır). Emin misiniz?')){localStorage.removeItem(K);location.hash='';location.reload()}}
+</script>
+</body>
+</html>
